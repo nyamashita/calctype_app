@@ -658,28 +658,34 @@
         }
       }
 
-      const formatChar = (ch) => {
-        if (alphabetDisplay === 'upper') return ch.toUpperCase();
-        if (alphabetDisplay === 'both') return ch; // first char or natural
-        return ch;
-      };
-
       return (
         <div className={`flex justify-center gap-1 mt-6 ${shaking ? 'animate-shake' : ''}`}>
-          {chars.map((c, i) => (
-            <span
-              key={i}
-              className={`text-4xl font-mono font-bold w-12 h-14 flex items-center justify-center rounded-lg transition-all ${
-                c.status === 'done'
-                  ? 'text-gray-300 bg-gray-50'
-                  : c.status === 'current'
-                  ? 'text-white bg-indigo-500 shadow-lg scale-110 animate-pulse-gentle'
-                  : 'text-gray-600 bg-gray-100'
-              }`}
-            >
-              {formatChar(c.ch)}
-            </span>
-          ))}
+          {chars.map((c, i) => {
+            const isBoth = alphabetDisplay === 'both';
+            const displayCh = alphabetDisplay === 'upper' || isBoth
+              ? c.ch.toUpperCase()
+              : c.ch;
+
+            return (
+              <span
+                key={i}
+                className={`font-mono font-bold w-12 h-14 flex flex-col items-center justify-center rounded-lg transition-all ${
+                  c.status === 'done'
+                    ? 'text-gray-300 bg-gray-50'
+                    : c.status === 'current'
+                    ? 'text-white bg-indigo-500 shadow-lg scale-110 animate-pulse-gentle'
+                    : 'text-gray-600 bg-gray-100'
+                }`}
+              >
+                <span className={isBoth ? 'text-3xl leading-none' : 'text-4xl'}>{displayCh}</span>
+                {isBoth && (
+                  <span className={`text-xs leading-none mt-0.5 ${
+                    c.status === 'done' ? 'text-gray-300' : c.status === 'current' ? 'text-indigo-200' : 'text-gray-400'
+                  }`}>{c.ch}</span>
+                )}
+              </span>
+            );
+          })}
         </div>
       );
     }
@@ -726,8 +732,14 @@
     }
 
     // --- KeyboardDisplay ---
-    function KeyboardDisplay({ nextKey }) {
+    function KeyboardDisplay({ nextKey, alphabetDisplay }) {
       const rowOffsets = [0, 0.5, 0.75, 1.25]; // rem offset per row for stagger
+      const isBoth = alphabetDisplay === 'both';
+
+      const formatKey = (k) => {
+        if (alphabetDisplay === 'upper' || isBoth) return k.toUpperCase();
+        return k; // lower
+      };
 
       return (
         <div className="mt-6 animate-fade-in">
@@ -735,17 +747,27 @@
             {JIS_KEYBOARD_ROWS.map((row, ri) => (
               <div key={ri} className="flex gap-1 mb-1 justify-center" style={{ paddingLeft: `${rowOffsets[ri]}rem` }}>
                 {row.map(k => {
+                  const isAlpha = /^[a-z]$/.test(k);
                   const isHighlight = nextKey && k === nextKey.toLowerCase();
                   return (
                     <div
                       key={k}
-                      className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-bold border transition-all ${
+                      className={`w-10 flex flex-col items-center justify-center rounded-lg font-bold border transition-all ${
+                        isBoth && isAlpha ? 'h-12' : 'h-10'
+                      } ${
                         isHighlight
                           ? 'bg-indigo-500 text-white border-indigo-600 shadow-lg scale-110'
                           : 'bg-white text-gray-600 border-gray-300'
                       }`}
                     >
-                      {k.toUpperCase()}
+                      <span className={isBoth && isAlpha ? 'text-sm leading-none' : 'text-sm'}>
+                        {isAlpha ? formatKey(k) : k}
+                      </span>
+                      {isBoth && isAlpha && (
+                        <span className={`text-[10px] leading-none mt-0.5 ${
+                          isHighlight ? 'text-indigo-200' : 'text-gray-400'
+                        }`}>{k}</span>
+                      )}
                     </div>
                   );
                 })}
@@ -757,7 +779,7 @@
     }
 
     // --- GameScreen ---
-    function GameScreen({ config, questions, startTime, onFinish }) {
+    function GameScreen({ config, questions, startTime, onFinish, onQuit }) {
       const [currentIndex, setCurrentIndex] = useState(0);
       const [segmentIndex, setSegmentIndex] = useState(0);
       const [segmentInput, setSegmentInput] = useState('');
@@ -849,9 +871,18 @@
 
           {config.showKeyboard && (
             <div className="flex justify-center">
-              <KeyboardDisplay nextKey={nextKey} />
+              <KeyboardDisplay nextKey={nextKey} alphabetDisplay={config.alphabetDisplay} />
             </div>
           )}
+
+          <div className="mt-8">
+            <button
+              onClick={onQuit}
+              className="px-6 py-2 bg-white text-gray-400 border border-gray-300 rounded-xl text-base font-bold hover:bg-gray-50 hover:text-gray-600 transition-all"
+            >
+              やめる
+            </button>
+          </div>
         </div>
       );
     }
@@ -952,6 +983,7 @@
               questions={questions}
               startTime={startTime}
               onFinish={handleFinish}
+              onQuit={handleBackToConfig}
             />
           )}
           {phase === 'result' && (
