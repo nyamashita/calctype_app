@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>タイピング けいさんゲーム</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @keyframes bounceIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.05); }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes countdownPop {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px); }
+      40% { transform: translateX(4px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .animate-bounce-in { animation: bounceIn 0.5s ease-out; }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+    .animate-pulse-gentle { animation: pulse 1.5s ease-in-out infinite; }
+    .animate-slide-up { animation: slideUp 0.5s ease-out; }
+    .animate-countdown { animation: countdownPop 0.6s ease-out; }
+    .animate-shake { animation: shake 0.3s ease-out; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ============================================================
+    // 1. 定数・データテーブル
+    // ============================================================
+
+    const KANA_ROMAJI_MAP = {
+      'あ': ['a'], 'い': ['i'], 'う': ['u'], 'え': ['e'], 'お': ['o'],
+      'か': ['ka'], 'き': ['ki'], 'く': ['ku'], 'け': ['ke'], 'こ': ['ko'],
+      'さ': ['sa'], 'し': ['shi', 'si'], 'す': ['su'], 'せ': ['se'], 'そ': ['so'],
+      'た': ['ta'], 'ち': ['chi', 'ti'], 'つ': ['tsu', 'tu'], 'て': ['te'], 'と': ['to'],
+      'な': ['na'], 'に': ['ni'], 'ぬ': ['nu'], 'ね': ['ne'], 'の': ['no'],
+      'は': ['ha'], 'ひ': ['hi'], 'ふ': ['fu', 'hu'], 'へ': ['he'], 'ほ': ['ho'],
+      'ま': ['ma'], 'み': ['mi'], 'む': ['mu'], 'め': ['me'], 'も': ['mo'],
+      'や': ['ya'], 'ゆ': ['yu'], 'よ': ['yo'],
+      'ら': ['ra'], 'り': ['ri'], 'る': ['ru'], 'れ': ['re'], 'ろ': ['ro'],
+      'わ': ['wa'], 'を': ['wo'], 'ん': ['n', 'nn'],
+      'が': ['ga'], 'ぎ': ['gi'], 'ぐ': ['gu'], 'げ': ['ge'], 'ご': ['go'],
+      'ざ': ['za'], 'じ': ['ji', 'zi'], 'ず': ['zu'], 'ぜ': ['ze'], 'ぞ': ['zo'],
+      'だ': ['da'], 'ぢ': ['di'], 'づ': ['du', 'zu'], 'で': ['de'], 'ど': ['do'],
+      'ば': ['ba'], 'び': ['bi'], 'ぶ': ['bu'], 'べ': ['be'], 'ぼ': ['bo'],
+      'ぱ': ['pa'], 'ぴ': ['pi'], 'ぷ': ['pu'], 'ぺ': ['pe'], 'ぽ': ['po'],
+      // 拗音
+      'きゃ': ['kya'], 'きゅ': ['kyu'], 'きょ': ['kyo'],
+      'しゃ': ['sha', 'sya'], 'しゅ': ['shu', 'syu'], 'しょ': ['sho', 'syo'],
+      'ちゃ': ['cha', 'tya'], 'ちゅ': ['chu', 'tyu'], 'ちょ': ['cho', 'tyo'],
+      'にゃ': ['nya'], 'にゅ': ['nyu'], 'にょ': ['nyo'],
+      'ひゃ': ['hya'], 'ひゅ': ['hyu'], 'ひょ': ['hyo'],
+      'みゃ': ['mya'], 'みゅ': ['myu'], 'みょ': ['myo'],
+      'りゃ': ['rya'], 'りゅ': ['ryu'], 'りょ': ['ryo'],
+      'ぎゃ': ['gya'], 'ぎゅ': ['gyu'], 'ぎょ': ['gyo'],
+      'じゃ': ['ja', 'zya', 'jya'], 'じゅ': ['ju', 'zyu', 'jyu'], 'じょ': ['jo', 'zyo', 'jyo'],
+      'びゃ': ['bya'], 'びゅ': ['byu'], 'びょ': ['byo'],
+      'ぴゃ': ['pya'], 'ぴゅ': ['pyu'], 'ぴょ': ['pyo'],
+      // 促音は特別処理
+      'っ': ['xtu', 'ltu'],
+    };
+
+    const VOWELS_AND_YA = new Set(['a', 'i', 'u', 'e', 'o', 'y', 'n']);
+
+    const JIS_KEYBOARD_ROWS = [
+      ['1','2','3','4','5','6','7','8','9','0','-','^'],
+      ['q','w','e','r','t','y','u','i','o','p','@','['],
+      ['a','s','d','f','g','h','j','k','l',';',':',']'],
+      ['z','x','c','v','b','n','m',',','.','/'],
+    ];
+
+    const PRAISE_MESSAGES = [
+      'すごい！よくがんばったね！',
+      'やったね！かんぺき！',
+      'さいこう！がんばったね！',
+      'すばらしい！おみごと！',
+      'グッジョブ！ばっちり！',
+      'かっこいい！よくできたね！',
+      'たいへんよくできました！',
+      'ナイス！つぎもがんばろう！',
+    ];
+
+    // ============================================================
+    // 2. 数字→日本語読み変換
+    // ============================================================
+
+    const DIGIT_READINGS = ['', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう'];
+
+    function numberToJapanese(n) {
+      if (n === 0) return 'ぜろ';
+      if (n < 0) return 'まいなす' + numberToJapanese(-n);
+
+      let result = '';
+
+      // 百の位
+      if (n >= 100) {
+        const h = Math.floor(n / 100);
+        if (h === 1) {
+          result += 'ひゃく';
+        } else if (h === 3) {
+          result += 'さんびゃく';
+        } else if (h === 6) {
+          result += 'ろっぴゃく';
+        } else if (h === 8) {
+          result += 'はっぴゃく';
+        } else {
+          result += DIGIT_READINGS[h] + 'ひゃく';
+        }
+        n = n % 100;
+        if (n === 0) return result;
+      }
+
+      // 十の位
+      if (n >= 10) {
+        const t = Math.floor(n / 10);
+        if (t === 1) {
+          result += 'じゅう';
+        } else {
+          result += DIGIT_READINGS[t] + 'じゅう';
+        }
+        n = n % 10;
+        if (n === 0) return result;
+      }
+
+      // 一の位
+      result += DIGIT_READINGS[n];
+      return result;
+    }
+
+    // ============================================================
+    // 3. ローマ字入力エンジン
+    // ============================================================
+
+    function decomposeToKana(hiragana) {
+      const result = [];
+      let i = 0;
+      while (i < hiragana.length) {
+        // 拗音: 2文字チェック
+        if (i + 1 < hiragana.length) {
+          const two = hiragana[i] + hiragana[i + 1];
+          if (KANA_ROMAJI_MAP[two]) {
+            result.push(two);
+            i += 2;
+            continue;
+          }
+        }
+        // 1文字
+        if (KANA_ROMAJI_MAP[hiragana[i]]) {
+          result.push(hiragana[i]);
+          i += 1;
+        } else {
+          // Unknown char, skip
+          i += 1;
+        }
+      }
+      return result;
+    }
+
+    function buildRomajiSegments(kanaList) {
+      const segments = [];
+      for (let i = 0; i < kanaList.length; i++) {
+        const kana = kanaList[i];
+
+        if (kana === 'っ') {
+          // 促音: 次のかながあれば子音重複パターンを生成
+          if (i + 1 < kanaList.length) {
+            const nextKana = kanaList[i + 1];
+            const nextPatterns = KANA_ROMAJI_MAP[nextKana] || [];
+            const combinedPatterns = [];
+            for (const np of nextPatterns) {
+              // 先頭の子音を重複
+              combinedPatterns.push(np[0] + np);
+            }
+            // xtu/ltu + 次のかなパターンも追加
+            for (const np of nextPatterns) {
+              combinedPatterns.push('xtu' + np);
+              combinedPatterns.push('ltu' + np);
+            }
+            segments.push({ kana: kana + nextKana, patterns: combinedPatterns });
+            i++; // skip next
+            continue;
+          } else {
+            segments.push({ kana, patterns: ['xtu', 'ltu'] });
+            continue;
+          }
+        }
+
+        if (kana === 'ん') {
+          // 「ん」: 次が母音/や行/な行なら nn 必須
+          const nextKana = i + 1 < kanaList.length ? kanaList[i + 1] : null;
+          let needDouble = false;
+          if (nextKana) {
+            const nextPatterns = KANA_ROMAJI_MAP[nextKana] || [];
+            if (nextPatterns.length > 0) {
+              const firstChar = nextPatterns[0][0];
+              if (VOWELS_AND_YA.has(firstChar)) {
+                needDouble = true;
+              }
+            }
+          }
+          if (needDouble) {
+            segments.push({ kana, patterns: ['nn'] });
+          } else {
+            segments.push({ kana, patterns: ['n', 'nn'] });
+          }
+          continue;
+        }
+
+        const patterns = KANA_ROMAJI_MAP[kana] || [kana];
+        segments.push({ kana, patterns: [...patterns] });
+      }
+      return segments;
+    }
+
+    // Returns: 'CONTINUE' | 'SEGMENT_COMPLETE' | 'WRONG'
+    function handleKeyPress(key, segment, currentInput) {
+      const newInput = currentInput + key;
+      const matching = segment.patterns.filter(p => p.startsWith(newInput));
+
+      if (matching.length === 0) {
+        return { result: 'WRONG', input: currentInput };
+      }
+
+      const exact = matching.find(p => p === newInput);
+      if (exact) {
+        return { result: 'SEGMENT_COMPLETE', input: '' };
+      }
+
+      return { result: 'CONTINUE', input: newInput };
+    }
+
+    // Build segments for custom words (direct romaji)
+    function buildCustomSegments(romajiStr) {
+      return romajiStr.split('').map(ch => ({
+        kana: ch,
+        patterns: [ch],
+      }));
+    }
+
+    // ============================================================
+    // 4. 問題生成
+    // ============================================================
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateCalcProblem(config) {
+      const op = config.operations[randInt(0, config.operations.length - 1)];
+      let a, b, answer, expression, symbol;
+
+      if (op === 'mul') {
+        a = randInt(1, 9);
+        b = randInt(1, 9);
+        answer = a * b;
+        symbol = '×';
+      } else {
+        const max = config.maxDigits === 2 ? 99 : 9;
+        const min = config.maxDigits === 2 ? 1 : 1;
+        if (op === 'add') {
+          a = randInt(min, max);
+          b = randInt(min, max);
+          answer = a + b;
+          symbol = '+';
+        } else {
+          // sub: ensure non-negative
+          a = randInt(min, max);
+          b = randInt(min, max);
+          if (a < b) [a, b] = [b, a];
+          answer = a - b;
+          symbol = '−';
+        }
+      }
+
+      expression = `${a} ${symbol} ${b}`;
+      const reading = numberToJapanese(answer);
+      const kanaList = decomposeToKana(reading);
+      const segments = buildRomajiSegments(kanaList);
+
+      return {
+        type: 'calc',
+        expression,
+        answer,
+        answerReading: segments[0]?.patterns[0] ? segments.map(s => s.patterns[0]).join('') : '',
+        segments,
+      };
+    }
+
+    function generateQuestions(config) {
+      const questions = [];
+      for (let i = 0; i < config.questionCount; i++) {
+        // Custom word insertion: ~1 in 3-4 questions
+        if (config.useCustomWords && config.customWords.length > 0 && Math.random() < 0.3) {
+          const word = config.customWords[randInt(0, config.customWords.length - 1)];
+          const romaji = word.romaji.toLowerCase();
+          const segments = buildCustomSegments(romaji);
+          questions.push({
+            type: 'custom',
+            expression: word.display,
+            answer: null,
+            answerReading: romaji,
+            segments,
+          });
+        } else {
+          questions.push(generateCalcProblem(config));
+        }
+      }
+      return questions;
+    }
+
+    // ============================================================
+    // 5. React コンポーネント
+    // ============================================================
+
+    // --- ConfigScreen ---
+    function ConfigScreen({ config, setConfig, onStart }) {
+      const [customRomaji, setCustomRomaji] = useState('');
+      const [customDisplay, setCustomDisplay] = useState('');
+
+      const toggleOperation = (op) => {
+        setConfig(prev => {
+          const ops = prev.operations.includes(op)
+            ? prev.operations.filter(o => o !== op)
+            : [...prev.operations, op];
+          if (ops.length === 0) return prev;
+          return { ...prev, operations: ops };
+        });
+      };
+
+      const addCustomWord = () => {
+        const romaji = customRomaji.trim();
+        const display = customDisplay.trim();
+        if (romaji && /^[a-zA-Z\-]+$/.test(romaji) && display) {
+          setConfig(prev => ({
+            ...prev,
+            customWords: [...prev.customWords, { romaji, display }],
+          }));
+          setCustomRomaji('');
+          setCustomDisplay('');
+        }
+      };
+
+      const removeCustomWord = (idx) => {
+        setConfig(prev => ({
+          ...prev,
+          customWords: prev.customWords.filter((_, i) => i !== idx),
+        }));
+      };
+
+      const canStart = config.operations.length > 0;
+
+      return (
+        <div className="max-w-lg mx-auto animate-fade-in">
+          <h1 className="text-4xl font-bold text-center text-indigo-600 mb-8">
+            ⌨️ タイピング けいさんゲーム
+          </h1>
+
+          {/* けいさんタイプ */}
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+            <h2 className="text-xl font-bold text-gray-700 mb-3">けいさんタイプ</h2>
+            <div className="flex gap-3 flex-wrap">
+              {[
+                { key: 'add', label: 'たしざん (+)' },
+                { key: 'sub', label: 'ひきざん (−)' },
+                { key: 'mul', label: 'かけざん (×)' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => toggleOperation(key)}
+                  className={`px-5 py-3 rounded-xl text-lg font-bold transition-all ${
+                    config.operations.includes(key)
+                      ? 'bg-indigo-500 text-white shadow-lg scale-105'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* けたすう */}
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+            <h2 className="text-xl font-bold text-gray-700 mb-3">けたすう（かけざんいがい）</h2>
+            <div className="flex gap-3">
+              {[1, 2].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setConfig(prev => ({ ...prev, maxDigits: d }))}
+                  className={`px-6 py-3 rounded-xl text-lg font-bold transition-all ${
+                    config.maxDigits === d
+                      ? 'bg-indigo-500 text-white shadow-lg scale-105'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {d}けた
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* もんだいすう */}
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+            <h2 className="text-xl font-bold text-gray-700 mb-3">もんだいすう</h2>
+            <div className="flex gap-3 flex-wrap">
+              {[5, 10, 15, 20].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setConfig(prev => ({ ...prev, questionCount: n }))}
+                  className={`px-5 py-3 rounded-xl text-lg font-bold transition-all ${
+                    config.questionCount === n
+                      ? 'bg-indigo-500 text-white shadow-lg scale-105'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {n}もん
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* アルファベットひょうじ */}
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+            <h2 className="text-xl font-bold text-gray-700 mb-3">アルファベットひょうじ</h2>
+            <div className="flex gap-3 flex-wrap">
+              {[
+                { key: 'lower', label: 'こもじ (abc)' },
+                { key: 'upper', label: 'おおもじ (ABC)' },
+                { key: 'both', label: 'りょうほう (Abc)' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setConfig(prev => ({ ...prev, alphabetDisplay: key }))}
+                  className={`px-5 py-3 rounded-xl text-lg font-bold transition-all ${
+                    config.alphabetDisplay === key
+                      ? 'bg-indigo-500 text-white shadow-lg scale-105'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* キーボードほじょ */}
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-700">キーボードほじょひょうじ</h2>
+              <button
+                onClick={() => setConfig(prev => ({ ...prev, showKeyboard: !prev.showKeyboard }))}
+                className={`relative w-14 h-8 rounded-full transition-colors ${
+                  config.showKeyboard ? 'bg-indigo-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                    config.showKeyboard ? 'translate-x-6' : ''
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* オリジナルもんだい */}
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-bold text-gray-700">オリジナルもんだいをまぜる</h2>
+              <button
+                onClick={() => setConfig(prev => ({ ...prev, useCustomWords: !prev.useCustomWords }))}
+                className={`relative w-14 h-8 rounded-full transition-colors ${
+                  config.useCustomWords ? 'bg-indigo-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                    config.useCustomWords ? 'translate-x-6' : ''
+                  }`}
+                />
+              </button>
+            </div>
+            {config.useCustomWords && (
+              <div className="animate-fade-in">
+                <div className="mb-3 space-y-2">
+                  <input
+                    type="text"
+                    inputMode="latin"
+                    autoComplete="off"
+                    value={customRomaji}
+                    onChange={e => setCustomRomaji(e.target.value)}
+                    placeholder="ローマじ（れい: sakura）"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl text-lg focus:border-indigo-400 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    value={customDisplay}
+                    onChange={e => setCustomDisplay(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addCustomWord(); }}
+                    placeholder="ひょうじすることば（れい: さくら）"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl text-lg focus:border-indigo-400 focus:outline-none"
+                  />
+                  <button
+                    onClick={addCustomWord}
+                    disabled={!customRomaji.trim() || !/^[a-zA-Z\-]+$/.test(customRomaji.trim()) || !customDisplay.trim()}
+                    className={`w-full py-2 rounded-xl font-bold transition-colors ${
+                      customRomaji.trim() && /^[a-zA-Z\-]+$/.test(customRomaji.trim()) && customDisplay.trim()
+                        ? 'bg-indigo-500 text-white hover:bg-indigo-600'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    ついか
+                  </button>
+                </div>
+                {config.customWords.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {config.customWords.map((word, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-base font-medium">
+                        {word.display}（{word.romaji}）
+                        <button
+                          onClick={() => removeCustomWord(idx)}
+                          className="ml-1 text-indigo-400 hover:text-red-500 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* スタートボタン */}
+          <button
+            onClick={onStart}
+            disabled={!canStart}
+            className={`w-full py-4 rounded-2xl text-2xl font-bold transition-all shadow-lg ${
+              canStart
+                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            スタート！
+          </button>
+        </div>
+      );
+    }
+
+    // --- CountdownScreen ---
+    function CountdownScreen({ onDone }) {
+      const [count, setCount] = useState(3);
+
+      useEffect(() => {
+        if (count > 0) {
+          const t = setTimeout(() => setCount(count - 1), 800);
+          return () => clearTimeout(t);
+        } else {
+          const t = setTimeout(onDone, 800);
+          return () => clearTimeout(t);
+        }
+      }, [count, onDone]);
+
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div key={count} className="animate-countdown text-9xl font-bold text-indigo-600">
+            {count > 0 ? count : 'スタート！'}
+          </div>
+        </div>
+      );
+    }
+
+    // --- ProblemDisplay ---
+    function ProblemDisplay({ question }) {
+      if (question.type === 'custom') {
+        return (
+          <div className="text-center animate-fade-in">
+            <p className="text-2xl text-gray-500 mb-2">つぎのことばをタイプしよう！</p>
+            <p className="text-5xl font-bold text-indigo-600">「{question.expression}」</p>
+          </div>
+        );
+      }
+      return (
+        <div className="text-center animate-fade-in">
+          <p className="text-6xl font-bold text-gray-800">
+            {question.expression} = <span className="text-indigo-500">?</span>
+          </p>
+        </div>
+      );
+    }
+
+    // --- RomajiGuide ---
+    function RomajiGuide({ segments, segmentIndex, segmentInput, alphabetDisplay, shaking }) {
+      // Build flat character list with segment boundaries
+      const chars = [];
+      let completedChars = 0;
+      let currentStartIdx = 0;
+
+      for (let si = 0; si < segments.length; si++) {
+        const seg = segments[si];
+        const displayRomaji = seg.patterns[0]; // guide display
+
+        if (si < segmentIndex) {
+          // completed segment
+          for (let ci = 0; ci < displayRomaji.length; ci++) {
+            chars.push({ ch: displayRomaji[ci], status: 'done' });
+          }
+        } else if (si === segmentIndex) {
+          currentStartIdx = chars.length;
+          // Find a matching pattern for current input to show correct guide
+          let guidePattern = displayRomaji;
+          if (segmentInput.length > 0) {
+            const matchingPattern = seg.patterns.find(p => p.startsWith(segmentInput));
+            if (matchingPattern) guidePattern = matchingPattern;
+          }
+          for (let ci = 0; ci < guidePattern.length; ci++) {
+            if (ci < segmentInput.length) {
+              chars.push({ ch: guidePattern[ci], status: 'done' });
+            } else if (ci === segmentInput.length) {
+              chars.push({ ch: guidePattern[ci], status: 'current' });
+            } else {
+              chars.push({ ch: guidePattern[ci], status: 'pending' });
+            }
+          }
+        } else {
+          // future segment
+          for (let ci = 0; ci < displayRomaji.length; ci++) {
+            chars.push({ ch: displayRomaji[ci], status: 'pending' });
+          }
+        }
+      }
+
+      const formatChar = (ch) => {
+        if (alphabetDisplay === 'upper') return ch.toUpperCase();
+        if (alphabetDisplay === 'both') return ch; // first char or natural
+        return ch;
+      };
+
+      return (
+        <div className={`flex justify-center gap-1 mt-6 ${shaking ? 'animate-shake' : ''}`}>
+          {chars.map((c, i) => (
+            <span
+              key={i}
+              className={`text-4xl font-mono font-bold w-12 h-14 flex items-center justify-center rounded-lg transition-all ${
+                c.status === 'done'
+                  ? 'text-gray-300 bg-gray-50'
+                  : c.status === 'current'
+                  ? 'text-white bg-indigo-500 shadow-lg scale-110 animate-pulse-gentle'
+                  : 'text-gray-600 bg-gray-100'
+              }`}
+            >
+              {formatChar(c.ch)}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    // --- ProgressBar ---
+    function ProgressBar({ current, total }) {
+      const pct = ((current) / total) * 100;
+      return (
+        <div className="w-full max-w-md mx-auto mt-8">
+          <div className="flex justify-between text-sm text-gray-500 mb-1 font-bold">
+            <span>{current} / {total}</span>
+          </div>
+          <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // --- Timer ---
+    function Timer({ startTime }) {
+      const [elapsed, setElapsed] = useState(0);
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setElapsed(Math.floor((Date.now() - startTime) / 1000));
+        }, 100);
+        return () => clearInterval(interval);
+      }, [startTime]);
+
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+
+      return (
+        <div className="text-center mt-4">
+          <span className="text-2xl font-mono text-gray-500 font-bold">
+            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          </span>
+        </div>
+      );
+    }
+
+    // --- KeyboardDisplay ---
+    function KeyboardDisplay({ nextKey }) {
+      const rowOffsets = [0, 0.5, 0.75, 1.25]; // rem offset per row for stagger
+
+      return (
+        <div className="mt-6 animate-fade-in">
+          <div className="inline-block mx-auto bg-gray-100 p-3 rounded-2xl shadow-inner">
+            {JIS_KEYBOARD_ROWS.map((row, ri) => (
+              <div key={ri} className="flex gap-1 mb-1 justify-center" style={{ paddingLeft: `${rowOffsets[ri]}rem` }}>
+                {row.map(k => {
+                  const isHighlight = nextKey && k === nextKey.toLowerCase();
+                  return (
+                    <div
+                      key={k}
+                      className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-bold border transition-all ${
+                        isHighlight
+                          ? 'bg-indigo-500 text-white border-indigo-600 shadow-lg scale-110'
+                          : 'bg-white text-gray-600 border-gray-300'
+                      }`}
+                    >
+                      {k.toUpperCase()}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // --- GameScreen ---
+    function GameScreen({ config, questions, startTime, onFinish }) {
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [segmentIndex, setSegmentIndex] = useState(0);
+      const [segmentInput, setSegmentInput] = useState('');
+      const [shaking, setShaking] = useState(false);
+
+      const stateRef = useRef();
+      stateRef.current = { currentIndex, segmentIndex, segmentInput, questions };
+
+      useEffect(() => {
+        const handler = (e) => {
+          if (e.metaKey || e.ctrlKey || e.altKey) return;
+          const key = e.key.toLowerCase();
+          if (!/^[a-z\-]$/.test(key)) return;
+          e.preventDefault();
+
+          const s = stateRef.current;
+          const q = s.questions[s.currentIndex];
+          if (!q) return;
+          const seg = q.segments[s.segmentIndex];
+          if (!seg) return;
+
+          const { result, input } = handleKeyPress(key, seg, s.segmentInput);
+
+          if (result === 'WRONG') {
+            setShaking(true);
+            setTimeout(() => setShaking(false), 300);
+            return;
+          }
+
+          if (result === 'CONTINUE') {
+            setSegmentInput(input);
+            return;
+          }
+
+          if (result === 'SEGMENT_COMPLETE') {
+            const nextSeg = s.segmentIndex + 1;
+            if (nextSeg >= q.segments.length) {
+              // Next question
+              const nextQ = s.currentIndex + 1;
+              if (nextQ >= s.questions.length) {
+                onFinish(Date.now());
+              } else {
+                setCurrentIndex(nextQ);
+                setSegmentIndex(0);
+                setSegmentInput('');
+              }
+            } else {
+              setSegmentIndex(nextSeg);
+              setSegmentInput('');
+            }
+          }
+        };
+
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+      }, [onFinish]);
+
+      const question = questions[currentIndex];
+      if (!question) return null;
+
+      const currentSeg = question.segments[segmentIndex];
+      let nextKey = null;
+      if (currentSeg) {
+        let guidePattern = currentSeg.patterns[0];
+        if (segmentInput.length > 0) {
+          const matchingPattern = currentSeg.patterns.find(p => p.startsWith(segmentInput));
+          if (matchingPattern) guidePattern = matchingPattern;
+        }
+        if (segmentInput.length < guidePattern.length) {
+          nextKey = guidePattern[segmentInput.length];
+        }
+      }
+
+      return (
+        <div className="max-w-2xl mx-auto text-center">
+          <ProgressBar current={currentIndex} total={questions.length} />
+          <Timer startTime={startTime} />
+
+          <div className="mt-8">
+            <ProblemDisplay question={question} />
+            <RomajiGuide
+              segments={question.segments}
+              segmentIndex={segmentIndex}
+              segmentInput={segmentInput}
+              alphabetDisplay={config.alphabetDisplay}
+              shaking={shaking}
+            />
+          </div>
+
+          {config.showKeyboard && (
+            <div className="flex justify-center">
+              <KeyboardDisplay nextKey={nextKey} />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- ResultScreen ---
+    function ResultScreen({ startTime, endTime, questionCount, onRetry, onConfig }) {
+      const elapsed = Math.round((endTime - startTime) / 1000);
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+      const [praise] = useState(() => PRAISE_MESSAGES[randInt(0, PRAISE_MESSAGES.length - 1)]);
+
+      return (
+        <div className="max-w-lg mx-auto text-center animate-slide-up">
+          <div className="text-7xl mb-6">🎉</div>
+          <h2 className="text-3xl font-bold text-indigo-600 mb-4">{praise}</h2>
+
+          <div className="bg-white rounded-2xl shadow-md p-8 mb-8">
+            <p className="text-xl text-gray-500 mb-2">かかったじかん</p>
+            <p className="text-5xl font-bold font-mono text-gray-800">
+              {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+            </p>
+            <p className="text-lg text-gray-400 mt-2">{questionCount}もん</p>
+          </div>
+
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={onRetry}
+              className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl text-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              もういちど
+            </button>
+            <button
+              onClick={onConfig}
+              className="px-8 py-4 bg-white text-indigo-500 border-2 border-indigo-300 rounded-2xl text-xl font-bold shadow hover:bg-indigo-50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              せっていにもどる
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================================
+    // 6. App ルート
+    // ============================================================
+
+    function App() {
+      const [config, setConfig] = useState({
+        operations: ['add'],
+        maxDigits: 1,
+        questionCount: 5,
+        alphabetDisplay: 'lower',
+        showKeyboard: true,
+        useCustomWords: false,
+        customWords: [],
+      });
+
+      const [phase, setPhase] = useState('config'); // config | countdown | playing | result
+      const [questions, setQuestions] = useState([]);
+      const [startTime, setStartTime] = useState(0);
+      const [endTime, setEndTime] = useState(0);
+
+      const handleStart = useCallback(() => {
+        setPhase('countdown');
+      }, []);
+
+      const handleCountdownDone = useCallback(() => {
+        const qs = generateQuestions(config);
+        setQuestions(qs);
+        setStartTime(Date.now());
+        setPhase('playing');
+      }, [config]);
+
+      const handleFinish = useCallback((time) => {
+        setEndTime(time);
+        setPhase('result');
+      }, []);
+
+      const handleRetry = useCallback(() => {
+        setPhase('countdown');
+      }, []);
+
+      const handleBackToConfig = useCallback(() => {
+        setPhase('config');
+      }, []);
+
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+          {phase === 'config' && (
+            <ConfigScreen config={config} setConfig={setConfig} onStart={handleStart} />
+          )}
+          {phase === 'countdown' && (
+            <CountdownScreen onDone={handleCountdownDone} />
+          )}
+          {phase === 'playing' && (
+            <GameScreen
+              config={config}
+              questions={questions}
+              startTime={startTime}
+              onFinish={handleFinish}
+            />
+          )}
+          {phase === 'result' && (
+            <ResultScreen
+              startTime={startTime}
+              endTime={endTime}
+              questionCount={questions.length}
+              onRetry={handleRetry}
+              onConfig={handleBackToConfig}
+            />
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
