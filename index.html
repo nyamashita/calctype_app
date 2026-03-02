@@ -45,6 +45,14 @@
     .animate-slide-up { animation: slideUp 0.5s ease-out; }
     .animate-countdown { animation: countdownPop 0.6s ease-out; }
     .animate-shake { animation: shake 0.3s ease-out; }
+    @keyframes correctPop {
+      0% { transform: scale(1); }
+      30% { transform: scale(1.3); }
+      100% { transform: scale(1.15); }
+    }
+    .animate-correct {
+      animation: correctPop 0.4s ease-out forwards;
+    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
@@ -153,6 +161,59 @@
       // 一の位
       result += DIGIT_READINGS[n];
       return result;
+    }
+
+    // 数字を桁パーツごとの読みに分解し、各パーツ完了後の表示文字列を返す
+    function numberToJapaneseParts(n) {
+      if (n === 0) return [{ reading: 'ぜろ', revealedAnswer: '0' }];
+
+      const digits = String(n);
+      const totalLen = digits.length;
+      let revealed = '?'.repeat(totalLen);
+      const parts = [];
+      let remaining = n;
+
+      // 百の位
+      if (remaining >= 100) {
+        const h = Math.floor(remaining / 100);
+        let reading;
+        if (h === 1) reading = 'ひゃく';
+        else if (h === 3) reading = 'さんびゃく';
+        else if (h === 6) reading = 'ろっぴゃく';
+        else if (h === 8) reading = 'はっぴゃく';
+        else reading = DIGIT_READINGS[h] + 'ひゃく';
+
+        revealed = digits[0] + revealed.slice(1);
+        remaining = remaining % 100;
+        if (remaining === 0) {
+          revealed = digits; // 残りが0なら全桁確定
+        }
+        parts.push({ reading, revealedAnswer: revealed });
+      }
+
+      // 十の位
+      if (remaining >= 10) {
+        const t = Math.floor(remaining / 10);
+        let reading;
+        if (t === 1) reading = 'じゅう';
+        else reading = DIGIT_READINGS[t] + 'じゅう';
+
+        const tensPos = totalLen - 2;
+        revealed = revealed.slice(0, tensPos) + digits[tensPos] + revealed.slice(tensPos + 1);
+        remaining = remaining % 10;
+        if (remaining === 0) {
+          revealed = revealed.slice(0, -1) + digits[totalLen - 1]; // 一の位も確定(0)
+        }
+        parts.push({ reading, revealedAnswer: revealed });
+      }
+
+      // 一の位
+      if (remaining > 0) {
+        revealed = digits; // 全桁確定
+        parts.push({ reading: DIGIT_READINGS[remaining], revealedAnswer: revealed });
+      }
+
+      return parts;
     }
 
     // ============================================================
@@ -301,9 +362,21 @@
       }
 
       expression = `${a} ${symbol} ${b}`;
-      const reading = numberToJapanese(answer);
-      const kanaList = decomposeToKana(reading);
-      const segments = buildRomajiSegments(kanaList);
+
+      // パーツごとにセグメントを構築し、revealPointsを生成
+      const parts = numberToJapaneseParts(answer);
+      const segments = [];
+      const revealPoints = []; // [{afterSegmentIndex, revealedAnswer}]
+
+      for (const part of parts) {
+        const kanaList = decomposeToKana(part.reading);
+        const partSegments = buildRomajiSegments(kanaList);
+        segments.push(...partSegments);
+        revealPoints.push({
+          afterSegmentIndex: segments.length - 1,
+          revealedAnswer: part.revealedAnswer,
+        });
+      }
 
       return {
         type: 'calc',
@@ -311,6 +384,8 @@
         answer,
         answerReading: segments[0]?.patterns[0] ? segments.map(s => s.patterns[0]).join('') : '',
         segments,
+        revealPoints,
+        initialDisplay: '?'.repeat(String(answer).length),
       };
     }
 
@@ -599,26 +674,42 @@
     }
 
     // --- ProblemDisplay ---
-    function ProblemDisplay({ question }) {
+    function ProblemDisplay({ question, showAnswer, revealedDisplay }) {
       if (question.type === 'custom') {
         return (
           <div className="text-center animate-fade-in">
             <p className="text-2xl text-gray-500 mb-2">つぎのことばをタイプしよう！</p>
-            <p className="text-5xl font-bold text-indigo-600">「{question.expression}」</p>
+            <p className={`text-5xl font-bold ${showAnswer ? 'text-emerald-500 animate-correct' : 'text-indigo-600'}`}>
+              「{question.expression}」
+            </p>
           </div>
         );
       }
+
+      // 桁ごとに色分け表示
+      const display = showAnswer ? String(question.answer) : (revealedDisplay || '?');
       return (
         <div className="text-center animate-fade-in">
           <p className="text-6xl font-bold text-gray-800">
-            {question.expression} = <span className="text-indigo-500">?</span>
+            {question.expression} ={' '}
+            {showAnswer ? (
+              <span className="text-emerald-500 animate-correct">{question.answer}</span>
+            ) : (
+              <span>
+                {display.split('').map((ch, i) => (
+                  <span key={i} className={ch === '?' ? 'text-indigo-500' : 'text-emerald-500'}>
+                    {ch}
+                  </span>
+                ))}
+              </span>
+            )}
           </p>
         </div>
       );
     }
 
     // --- RomajiGuide ---
-    function RomajiGuide({ segments, segmentIndex, segmentInput, alphabetDisplay, shaking }) {
+    function RomajiGuide({ segments, segmentIndex, segmentInput, alphabetDisplay, shaking, allDone }) {
       // Build flat character list with segment boundaries
       const chars = [];
       let completedChars = 0;
@@ -628,7 +719,7 @@
         const seg = segments[si];
         const displayRomaji = seg.patterns[0]; // guide display
 
-        if (si < segmentIndex) {
+        if (allDone || si < segmentIndex) {
           // completed segment
           for (let ci = 0; ci < displayRomaji.length; ci++) {
             chars.push({ ch: displayRomaji[ci], status: 'done' });
@@ -709,18 +800,27 @@
     }
 
     // --- Timer ---
-    function Timer({ startTime }) {
+    function Timer({ startTime, paused }) {
       const [elapsed, setElapsed] = useState(0);
+      const pausedAtRef = useRef(null);
 
       useEffect(() => {
+        if (paused) {
+          if (pausedAtRef.current === null) {
+            pausedAtRef.current = elapsed;
+          }
+          return;
+        }
+        pausedAtRef.current = null;
         const interval = setInterval(() => {
           setElapsed(Math.floor((Date.now() - startTime) / 1000));
         }, 100);
         return () => clearInterval(interval);
-      }, [startTime]);
+      }, [startTime, paused]);
 
-      const minutes = Math.floor(elapsed / 60);
-      const seconds = elapsed % 60;
+      const displayElapsed = paused && pausedAtRef.current !== null ? pausedAtRef.current : elapsed;
+      const minutes = Math.floor(displayElapsed / 60);
+      const seconds = displayElapsed % 60;
 
       return (
         <div className="text-center mt-4">
@@ -784,9 +884,16 @@
       const [segmentIndex, setSegmentIndex] = useState(0);
       const [segmentInput, setSegmentInput] = useState('');
       const [shaking, setShaking] = useState(false);
+      const [showAnswer, setShowAnswer] = useState(false);
+      const [timerPaused, setTimerPaused] = useState(false);
+      const [revealedDisplay, setRevealedDisplay] = useState(() => {
+        const q = questions[0];
+        return q && q.initialDisplay ? q.initialDisplay : '?';
+      });
+      const pausedTimeRef = useRef(0);
 
       const stateRef = useRef();
-      stateRef.current = { currentIndex, segmentIndex, segmentInput, questions };
+      stateRef.current = { currentIndex, segmentIndex, segmentInput, questions, showAnswer };
 
       useEffect(() => {
         const handler = (e) => {
@@ -796,6 +903,8 @@
           e.preventDefault();
 
           const s = stateRef.current;
+          if (s.showAnswer) return; // 正解表示中は入力を無視
+
           const q = s.questions[s.currentIndex];
           if (!q) return;
           const seg = q.segments[s.segmentIndex];
@@ -816,16 +925,37 @@
 
           if (result === 'SEGMENT_COMPLETE') {
             const nextSeg = s.segmentIndex + 1;
-            if (nextSeg >= q.segments.length) {
-              // Next question
-              const nextQ = s.currentIndex + 1;
-              if (nextQ >= s.questions.length) {
-                onFinish(Date.now());
-              } else {
-                setCurrentIndex(nextQ);
-                setSegmentIndex(0);
-                setSegmentInput('');
+
+            // revealPoints に基づいて途中経過の数字を表示
+            if (q.revealPoints) {
+              const rp = q.revealPoints.find(r => r.afterSegmentIndex === s.segmentIndex);
+              if (rp) {
+                setRevealedDisplay(rp.revealedAnswer);
               }
+            }
+
+            if (nextSeg >= q.segments.length) {
+              // 問題正解 — 正解を表示してタイマーを停止
+              const pauseStart = Date.now();
+              setShowAnswer(true);
+              setTimerPaused(true);
+
+              setTimeout(() => {
+                pausedTimeRef.current += Date.now() - pauseStart;
+                setShowAnswer(false);
+                setTimerPaused(false);
+
+                const nextQ = s.currentIndex + 1;
+                if (nextQ >= s.questions.length) {
+                  onFinish(Date.now() - pausedTimeRef.current);
+                } else {
+                  const nextQuestion = s.questions[nextQ];
+                  setRevealedDisplay(nextQuestion.initialDisplay || '?');
+                  setCurrentIndex(nextQ);
+                  setSegmentIndex(0);
+                  setSegmentInput('');
+                }
+              }, 1500);
             } else {
               setSegmentIndex(nextSeg);
               setSegmentInput('');
@@ -856,16 +986,17 @@
       return (
         <div className="max-w-2xl mx-auto text-center">
           <ProgressBar current={currentIndex} total={questions.length} />
-          <Timer startTime={startTime} />
+          <Timer startTime={startTime} paused={timerPaused} />
 
           <div className="mt-8">
-            <ProblemDisplay question={question} />
+            <ProblemDisplay question={question} showAnswer={showAnswer} revealedDisplay={revealedDisplay} />
             <RomajiGuide
               segments={question.segments}
               segmentIndex={segmentIndex}
               segmentInput={segmentInput}
               alphabetDisplay={config.alphabetDisplay}
               shaking={shaking}
+              allDone={showAnswer}
             />
           </div>
 
