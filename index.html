@@ -92,6 +92,12 @@
       'じゃ': ['ja', 'zya', 'jya'], 'じゅ': ['ju', 'zyu', 'jyu'], 'じょ': ['jo', 'zyo', 'jyo'],
       'びゃ': ['bya'], 'びゅ': ['byu'], 'びょ': ['byo'],
       'ぴゃ': ['pya'], 'ぴゅ': ['pyu'], 'ぴょ': ['pyo'],
+      // 外来音・特殊音
+      'ゔ': ['vu'], 'ゔぁ': ['va'], 'ゔぃ': ['vi'], 'ゔぇ': ['ve'], 'ゔぉ': ['vo'],
+      'ふぃ': ['fi'], 'ふぇ': ['fe'], 'ふぉ': ['fo'],
+      'てぃ': ['thi', 'texi'], 'でぃ': ['dhi', 'dexi'],
+      'じぇ': ['je', 'jye', 'zye'],
+      'ー': ['-'],
       // 促音は特別処理
       'っ': ['xtu', 'ltu'],
     };
@@ -103,6 +109,106 @@
       ['q','w','e','r','t','y','u','i','o','p','@','['],
       ['a','s','d','f','g','h','j','k','l',';',':',']'],
       ['z','x','c','v','b','n','m',',','.','/'],
+    ];
+
+    // 50音練習用のかなリスト（清音・濁音・半濁音）
+    const GOJUON_KANA_LIST = [
+      // 清音
+      'あ', 'い', 'う', 'え', 'お',
+      'か', 'き', 'く', 'け', 'こ',
+      'さ', 'し', 'す', 'せ', 'そ',
+      'た', 'ち', 'つ', 'て', 'と',
+      'な', 'に', 'ぬ', 'ね', 'の',
+      'は', 'ひ', 'ふ', 'へ', 'ほ',
+      'ま', 'み', 'む', 'め', 'も',
+      'や', 'ゆ', 'よ',
+      'ら', 'り', 'る', 'れ', 'ろ',
+      'わ', 'を', 'ん',
+      // 濁音
+      'が', 'ぎ', 'ぐ', 'げ', 'ご',
+      'ざ', 'じ', 'ず', 'ぜ', 'ぞ',
+      'だ', 'ぢ', 'づ', 'で', 'ど',
+      'ば', 'び', 'ぶ', 'べ', 'ぼ',
+      // 半濁音
+      'ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ',
+    ];
+
+    // 単語練習用データ
+    const TANGO_LIST = [
+      {word:'甘根幸果',reading:'あまねさちか'},{word:'アレックス',reading:'あれっくす'},
+      {word:'アレッショー',reading:'あれっしょー'},{word:'石の剣',reading:'いしのつるぎ'},
+      {word:'インフィニティ',reading:'いんふぃにてぃ'},{word:'イル・カクト・ヒポポタモ',reading:'いるかくとひぽぽたも'},
+      {word:'宇宙刑事',reading:'うちゅうけいじ'},{word:'ヴァレン',reading:'ゔぁれん'},
+      {word:'海の心',reading:'うみのこころ'},{word:'エージェント',reading:'えーじぇんと'},
+      {word:'エンダーマン',reading:'えんだーまん'},{word:'エリトラ',reading:'えりとら'},
+      {word:'オメガポッピン',reading:'おめがぽっぴん'},{word:'黄金のリンゴ',reading:'おうごんのりんご'},
+      {word:'オクトプッシ・ココナッシ',reading:'おくとぷっしここなっし'},
+      {word:'辛木田絆斗',reading:'からきだはんと'},{word:'金床',reading:'かなとこ'},
+      {word:'カプチーノ・アサシーノ',reading:'かぷちーのあさしーの'},
+      {word:'仮面ライダーガヴ',reading:'かめんらいだーがゔ'},
+      {word:'キッキングミキック',reading:'きっきんぐみきっく'},{word:'金のリンゴ',reading:'きんのりんご'},
+      {word:'ギャバン',reading:'ぎゃばん'},{word:'クルンマチック',reading:'くるんまちっく'},
+      {word:'クリーパー',reading:'くりーぱー'},{word:'蜘蛛の目',reading:'くものめ'},
+      {word:'ケーキングゴチゾウ',reading:'けーきんぐごちぞう'},{word:'経験値',reading:'けいけんち'},
+      {word:'コードセブン',reading:'こーどせぶん'},{word:'小麦',reading:'こむぎ'},
+      {word:'黒曜石',reading:'こくようせき'},{word:'サフール',reading:'さふーる'},
+      {word:'作業台',reading:'さぎょうだい'},{word:'砂漠',reading:'さばく'},
+      {word:'ショウマ・ストマック',reading:'しょうますとまっく'},
+      {word:'シータ・ストマック',reading:'しーたすとまっく'},{word:'真紅の森',reading:'しんくのもり'},
+      {word:'ストマック家',reading:'すとまっくけ'},{word:'スティーブ',reading:'すてぃーぶ'},
+      {word:'スケルトン',reading:'すけるとん'},{word:'センタイ',reading:'せんたい'},
+      {word:'製図台',reading:'せいずだい'},{word:'世界',reading:'せかい'},
+      {word:'ソーダパンチ',reading:'そーだぱんち'},{word:'装備',reading:'そうび'},
+      {word:'ゾンビ',reading:'ぞんび'},{word:'竹原イーグル',reading:'たけはらいーぐる'},
+      {word:'焚き火',reading:'たきび'},{word:'タイダイ',reading:'たいだい'},
+      {word:'チップスゴチゾウ',reading:'ちっぷすごちぞう'},{word:'調合台',reading:'ちょうごうだい'},
+      {word:'チンパンジーニ・バナニーニ',reading:'ちんぱんじーにばなにーに'},
+      {word:'つるはし',reading:'つるはし'},{word:'土',reading:'つち'},
+      {word:'富士見鉄也',reading:'ふじみてつや'},{word:'テクノロム',reading:'てくのろむ'},
+      {word:'鉄格子',reading:'てつごうし'},{word:'テレポート',reading:'てれぽーと'},
+      {word:'砥石',reading:'といし'},{word:'洞窟',reading:'どうくつ'},
+      {word:'トララレロ・トラララ',reading:'とらられろとららら'},
+      {word:'南雲なすか',reading:'なぐもなすか'},{word:'奈落',reading:'ならく'},
+      {word:'生肉',reading:'なまにく'},{word:'二エルブ・ストマック',reading:'にえるぶすとまっく'},
+      {word:'鶏',reading:'にわとり'},{word:'人形',reading:'にんぎょう'},
+      {word:'ぬいぐるみ',reading:'ぬいぐるみ'},{word:'沼地',reading:'ぬまち'},
+      {word:'堀口ねむ',reading:'ほりぐちねむ'},{word:'ネザー',reading:'ねざー'},
+      {word:'粘土',reading:'ねんど'},{word:'ノクス',reading:'のくす'},
+      {word:'呪い',reading:'のろい'},{word:'飲み物',reading:'のみもの'},
+      {word:'ハント',reading:'はんと'},{word:'廃坑',reading:'はいこう'},
+      {word:'旗',reading:'はた'},{word:'ヒポポタモ',reading:'ひぽぽたも'},
+      {word:'火打石',reading:'ひうちいし'},{word:'火薬',reading:'かやく'},
+      {word:'フルットドリーロ',reading:'ふるっとどりーろ'},
+      {word:'不死のトーテム',reading:'ふしのとーてむ'},{word:'フリゴ・カメロ',reading:'ふりごかめろ'},
+      {word:'変身ベルト',reading:'へんしんべると'},{word:'平原',reading:'へいげん'},
+      {word:'ヘルム',reading:'へるむ'},{word:'骨',reading:'ほね'},
+      {word:'本棚',reading:'ほんだな'},{word:'丸石',reading:'まるいし'},
+      {word:'松明',reading:'たいまつ'},{word:'魔法',reading:'まほう'},
+      {word:'磨かれた安山岩',reading:'みがかれたあんざんがん'},
+      {word:'湖',reading:'みずうみ'},{word:'道',reading:'みち'},
+      {word:'ムゲン',reading:'むげん'},{word:'村人',reading:'むらびと'},
+      {word:'虫',reading:'むし'},{word:'メンバー',reading:'めんばー'},
+      {word:'メサ',reading:'めさ'},{word:'迷宮',reading:'めいきゅう'},
+      {word:'モンスター',reading:'もんすたー'},{word:'木材',reading:'もくざい'},
+      {word:'森',reading:'もり'},{word:'ヤミガシ',reading:'やみがし'},
+      {word:'矢細工台',reading:'やはざいくだい'},{word:'山',reading:'やま'},
+      {word:'夢の世界',reading:'ゆめのせかい'},{word:'弓',reading:'ゆみ'},
+      {word:'雪',reading:'ゆき'},{word:'万津莫',reading:'よろずばく'},
+      {word:'万津美浪',reading:'よろずみなみ'},{word:'溶岩',reading:'ようがん'},
+      {word:'ランゴ・ストマック',reading:'らんごすとまっく'},
+      {word:'ラピスラズリ',reading:'らぴすらずり'},
+      {word:'リゼル・ジャルダック',reading:'りぜるじゃるだっく'},
+      {word:'リズ',reading:'りず'},{word:'リンゴ',reading:'りんご'},
+      {word:'ルーム',reading:'るーむ'},{word:'ルビー',reading:'るびー'},
+      {word:'留守番',reading:'るすばん'},{word:'レーザーブレード',reading:'れーざーぶれーど'},
+      {word:'レッドストーン',reading:'れっどすとーん'},{word:'レンガ',reading:'れんが'},
+      {word:'ロム',reading:'ろむ'},{word:'蝋燭',reading:'ろうそく'},
+      {word:'牢屋',reading:'ろうや'},{word:'ワニ',reading:'わに'},
+      {word:'藁の山',reading:'わらのやま'},{word:'落とし穴',reading:'おとしあな'},
+      {word:'銀河連邦警察',reading:'ぎんがれんぽうけいさつ'},
+      {word:'ゴジュウジャー',reading:'ごじゅうじゃー'},{word:'ポッピンぐみ',reading:'ぽっぴんぐみ'},
+      {word:'ザクザクチップス',reading:'ざくざくちっぷす'},
+      {word:'ボンバルディーロ・クロコディロ',reading:'ぼんばるでぃーろくろこでぃろ'},
     ];
 
     const PRAISE_MESSAGES = [
@@ -389,11 +495,42 @@
       };
     }
 
+    function generateGojuonProblem() {
+      const kana = GOJUON_KANA_LIST[randInt(0, GOJUON_KANA_LIST.length - 1)];
+      const kanaList = decomposeToKana(kana);
+      const segments = buildRomajiSegments(kanaList);
+      return {
+        type: 'gojuon',
+        expression: kana,
+        answer: null,
+        answerReading: segments.map(s => s.patterns[0]).join(''),
+        segments,
+      };
+    }
+
+    function generateTangoProblem() {
+      const entry = TANGO_LIST[randInt(0, TANGO_LIST.length - 1)];
+      const kanaList = decomposeToKana(entry.reading);
+      const segments = buildRomajiSegments(kanaList);
+      return {
+        type: 'tango',
+        expression: entry.word,
+        reading: entry.reading,
+        answer: null,
+        answerReading: segments.map(s => s.patterns[0]).join(''),
+        segments,
+      };
+    }
+
     function generateQuestions(config) {
       const questions = [];
       for (let i = 0; i < config.questionCount; i++) {
-        // Custom word insertion: ~1 in 3-4 questions
-        if (config.useCustomWords && config.customWords.length > 0 && Math.random() < 0.3) {
+        if (config.mode === 'gojuon') {
+          questions.push(generateGojuonProblem());
+        } else if (config.mode === 'tango') {
+          questions.push(generateTangoProblem());
+        } else if (config.useCustomWords && config.customWords.length > 0 && Math.random() < 0.3) {
+          // Custom word insertion: ~1 in 3-4 questions
           const word = config.customWords[randInt(0, config.customWords.length - 1)];
           const romaji = word.romaji.toLowerCase();
           const segments = buildCustomSegments(romaji);
@@ -450,7 +587,7 @@
         }));
       };
 
-      const canStart = config.operations.length > 0;
+      const canStart = config.mode === 'gojuon' || config.mode === 'tango' || config.operations.length > 0;
 
       return (
         <div className="max-w-lg mx-auto animate-fade-in">
@@ -458,8 +595,32 @@
             ⌨️ タイピング けいさんゲーム
           </h1>
 
-          {/* けいさんタイプ */}
+          {/* ゲームモード */}
           <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+            <h2 className="text-xl font-bold text-gray-700 mb-3">ゲームモード</h2>
+            <div className="flex gap-3 flex-wrap">
+              {[
+                { key: 'calc', label: 'けいさん' },
+                { key: 'gojuon', label: '50おんれんしゅう' },
+                { key: 'tango', label: 'たんごれんしゅう' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setConfig(prev => ({ ...prev, mode: key }))}
+                  className={`px-5 py-3 rounded-xl text-lg font-bold transition-all ${
+                    config.mode === key
+                      ? 'bg-indigo-500 text-white shadow-lg scale-105'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* けいさんタイプ */}
+          {config.mode === 'calc' && <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
             <h2 className="text-xl font-bold text-gray-700 mb-3">けいさんタイプ</h2>
             <div className="flex gap-3 flex-wrap">
               {[
@@ -480,10 +641,10 @@
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* けたすう */}
-          <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+          {config.mode === 'calc' && <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
             <h2 className="text-xl font-bold text-gray-700 mb-3">けたすう（かけざんいがい）</h2>
             <div className="flex gap-3">
               {[1, 2].map(d => (
@@ -500,7 +661,7 @@
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
 
           {/* もんだいすう */}
           <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
@@ -566,7 +727,7 @@
           </div>
 
           {/* オリジナルもんだい */}
-          <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
+          {config.mode === 'calc' && <div className="bg-white rounded-2xl shadow-md p-6 mb-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold text-gray-700">オリジナルもんだいをまぜる</h2>
               <button
@@ -632,7 +793,7 @@
                 )}
               </div>
             )}
-          </div>
+          </div>}
 
           {/* スタートボタン */}
           <button
@@ -675,6 +836,31 @@
 
     // --- ProblemDisplay ---
     function ProblemDisplay({ question, showAnswer, revealedDisplay }) {
+      if (question.type === 'gojuon') {
+        return (
+          <div className="text-center animate-fade-in">
+            <p className="text-2xl text-gray-500 mb-2">このもじをタイプしよう！</p>
+            <p className={`text-8xl font-bold ${showAnswer ? 'text-emerald-500 animate-correct' : 'text-indigo-600'}`}>
+              {question.expression}
+            </p>
+          </div>
+        );
+      }
+
+      if (question.type === 'tango') {
+        return (
+          <div className="text-center animate-fade-in">
+            <p className="text-2xl text-gray-500 mb-2">つぎのたんごをタイプしよう！</p>
+            <p className={`text-5xl font-bold ${showAnswer ? 'text-emerald-500 animate-correct' : 'text-indigo-600'}`}>
+              {question.expression}
+            </p>
+            <p className={`text-3xl mt-2 ${showAnswer ? 'text-emerald-400' : 'text-gray-400'}`}>
+              {question.reading}
+            </p>
+          </div>
+        );
+      }
+
       if (question.type === 'custom') {
         return (
           <div className="text-center animate-fade-in">
@@ -1062,6 +1248,7 @@
 
     function App() {
       const [config, setConfig] = useState({
+        mode: 'calc', // 'calc' | 'gojuon' | 'tango'
         operations: ['add'],
         maxDigits: 1,
         questionCount: 5,
